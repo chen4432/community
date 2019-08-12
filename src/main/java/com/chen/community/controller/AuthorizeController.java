@@ -4,9 +4,12 @@ import com.chen.community.dto.AccessTokenDTO;
 import com.chen.community.dto.GithubUser;
 import com.chen.community.provider.GithubProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * @className AuthorizeController
@@ -17,19 +20,34 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class AuthorizeController {
     @Autowired
     private GithubProvider githubProvider;
+    @Value("${github.client.id}")
+    private String clientId;
+    @Value("${github.client.secret}")
+    private String clientSecret;
+    @Value("${github.redirect.uri}")
+    private String redirectUri;
+
+
     @GetMapping("/callback")
     public String callback(@RequestParam(name = "code")String code,
-                           @RequestParam(name="state")String state){
+                           @RequestParam(name="state")String state,
+                           HttpServletRequest request){
         AccessTokenDTO accessTokenDTO = new AccessTokenDTO();
         accessTokenDTO.setCode(code);
         accessTokenDTO.setState(state);
-        accessTokenDTO.setRedirect_uri("http://localhost:8887/callback");
-        accessTokenDTO.setClient_secret("0f9c2c087f6c94e03269c11dfc8611fdc5c5fd8c");
-        accessTokenDTO.setClient_id("11bf560988cce40d97aa");
+        accessTokenDTO.setRedirect_uri(redirectUri);
+        accessTokenDTO.setClient_secret(clientSecret);
+        accessTokenDTO.setClient_id(clientId);
         String accessToken = githubProvider.getAccessToken(accessTokenDTO);
         GithubUser user=githubProvider.getUser(accessToken);
-        System.out.println(user.getName());
-        return "index";
+        if(user!=null){
+            request.getSession().setAttribute("user",user);
+            //登录成功，写cookie和session
+            return "redirect:/";
+        }else {
+            //登录失败，重新登录
+            return "redirect:/";
+        }
     }
 
 }
